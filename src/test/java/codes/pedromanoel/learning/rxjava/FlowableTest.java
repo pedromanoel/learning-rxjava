@@ -18,25 +18,52 @@ class FlowableTest {
     }
 
     @Test
-    void items_emitted_only_on_subscription() {
-        Flowable<String> flowable = Flowable.fromCallable(() -> {
-            itemEmitted = true;
-            return "OK";
-        });
-        assertThat(itemEmitted).as("Item not emitted").isFalse();
+    void assembly_time_does_not_emit() {
+        givenFlowableThatEmitsAnItem();
 
-        flowable.subscribe();
-        assertThat(itemEmitted).as("Item was emitted").isTrue();
+        assertThat(itemEmitted)
+                .as("Item not emitted before subscribe")
+                .isFalse();
+    }
+
+    @Test
+    void items_emitted_only_on_subscription() {
+        givenFlowableThatEmitsAnItem().subscribe();
+
+        assertThat(itemEmitted)
+                .as("Item emitted after subscribe")
+                .isTrue();
+    }
+
+    @Test
+    void side_effects_not_called_on_assembly() {
+        givenFlowableWithSideEffectOnSubscribe();
+
+        assertThat(subscribeWasCalled)
+                .as("OnSubscribe not called before subscribe")
+                .isFalse();
     }
 
     @Test
     void subscription_side_effects_called_on_subscribe() {
-        Flowable<Integer> flowableWithOnSubscribe = Flowable
+        givenFlowableWithSideEffectOnSubscribe()
+                .subscribe();
+
+        assertThat(subscribeWasCalled)
+                .as("OnSubscribe called after subscription")
+                .isTrue();
+    }
+
+    private Flowable<String> givenFlowableThatEmitsAnItem() {
+        return Flowable.fromCallable(() -> {
+            itemEmitted = true;
+            return "OK";
+        });
+    }
+
+    private Flowable<Integer> givenFlowableWithSideEffectOnSubscribe() {
+        return Flowable
                 .just(1)
                 .doOnSubscribe(subscription -> subscribeWasCalled = true);
-        assertThat(subscribeWasCalled).as("OnSubscribe not called yet").isFalse();
-
-        flowableWithOnSubscribe.subscribe();
-        assertThat(subscribeWasCalled).as("OnSubscribe was called").isTrue();
     }
 }
